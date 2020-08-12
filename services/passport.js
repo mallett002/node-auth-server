@@ -4,13 +4,33 @@ const config = require('../config');
 const JwtStrategy = require('passport-jwt').Strategy;
 const ExtractJwt = require('passport-jwt').ExtractJwt;
 const LocalStrategy = require('passport-local');
+const bcrypt = require('bcrypt-nodejs');
 
-// Create local strategy
+// Create local strategy (for verifying email and password creds when signing in)
 const localOptions = {usernameField: 'email'};
 const localLogin = new LocalStrategy(localOptions, (email, password, done) => {
-    // verify username and password
+    // verify email and password
     // call done with user if has correct creds
     // else call done with false
+    User.findOne({email}, (err, user) => {
+        if (err) return done(err);
+        if (!user) return done(null, false);
+
+        // compare passwords
+        bcrypt.compare(password, user.password, (err, isMatch) => {
+            console.log({password, users: user.password});
+            if (err) return done(err);
+    
+            done(null, isMatch);
+        });
+        
+        // user.comparePassword(password, (err, isMatch) => {
+        //     if (err) return done(err);
+        //     if (!isMatch) return done(null, false);
+
+        //     return done(null, user);
+        // });
+    });
 });
 
 
@@ -20,7 +40,7 @@ const jwtOptions = {
     secretOrKey: config.secret
 };
 
-// create jwt strategy
+// create jwt strategy (for verifying a token for making auth'd requests)
 const jwtLogin = new JwtStrategy(jwtOptions, (payload, done) => {
     // See if the user ID in the payload exists in our db
     // if so, call done with that user 
@@ -38,3 +58,4 @@ const jwtLogin = new JwtStrategy(jwtOptions, (payload, done) => {
 
 // Tell passport to use this strategy
 passport.use(jwtLogin);
+passport.use(localLogin);
