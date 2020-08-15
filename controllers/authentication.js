@@ -1,6 +1,7 @@
 const User = require('../models/user');
 const jwt = require('jwt-simple');
 const {secret} = require('../config');
+const bcrypt = require('bcrypt');
 
 const tokenForUser = (user) => {
     const timestamp = new Date().getTime();
@@ -8,11 +9,20 @@ const tokenForUser = (user) => {
     return jwt.encode({sub: user.id, iat: timestamp}, secret);
 };
 
+const encryptPassword = (password) => {
+    const salt = bcrypt.genSaltSync(10);
+    const hash = bcrypt.hashSync(password, salt);
+
+    return hash;
+};
+
 exports.signin = (req, res, next) => {
     // User has already had their email and password auth'd
     // They just need a token
     // User (req.user) is from "done(null, user)" in passport.localLogin function
-    res.send({token: tokenForUser(req.user)});
+    const token = tokenForUser(req.user);
+
+    res.send({token});
 };
 
 exports.signup = (req, res, next) => {
@@ -36,9 +46,10 @@ exports.signup = (req, res, next) => {
         }
 
         // If a user with email does not exist, create and save a user
+        const encryptedPassword = encryptPassword(password);
         const user = new User({
             email,
-            password
+            password: encryptedPassword
         });
 
         user.save((err) => {
@@ -47,7 +58,9 @@ exports.signup = (req, res, next) => {
             }
 
             // respond to request success
-            res.json({token: tokenForUser(user)});
+            const token = tokenForUser(user);
+
+            res.json({token});
         });
     });
 };

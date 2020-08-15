@@ -4,7 +4,7 @@ const config = require('../config');
 const JwtStrategy = require('passport-jwt').Strategy;
 const ExtractJwt = require('passport-jwt').ExtractJwt;
 const LocalStrategy = require('passport-local');
-const bcrypt = require('bcrypt-nodejs');
+const bcrypt = require('bcrypt');
 
 // Create local strategy (for verifying email and password creds when signing in)
 const localOptions = {usernameField: 'email'};
@@ -17,19 +17,11 @@ const localLogin = new LocalStrategy(localOptions, (email, password, done) => {
         if (!user) return done(null, false);
 
         // compare passwords
-        bcrypt.compare(password, user.password, (err, isMatch) => {
-            console.log({password, users: user.password});
-            if (err) return done(err);
-    
-            done(null, isMatch);
-        });
-        
-        // user.comparePassword(password, (err, isMatch) => {
-        //     if (err) return done(err);
-        //     if (!isMatch) return done(null, false);
+        const isValidPassword = bcrypt.compareSync(password, user.password);
 
-        //     return done(null, user);
-        // });
+        if (!isValidPassword) return done(null, false);
+
+        return done(null, user);
     });
 });
 
